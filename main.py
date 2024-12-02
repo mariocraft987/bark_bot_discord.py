@@ -1,4 +1,4 @@
-# Code for Bark Dog discord bot
+# source code for Bark Dog discord bot
 
 import asyncio
 import discord
@@ -38,7 +38,7 @@ class SimpleView(discord.ui.View):
 
 x = range(50)
 
-os.chdir("C:/Users/mtsim/OneDrive/Desktop/cool/main/bark_files/barkbot-discord-bot/")
+os.chdir("C:/Users/user/OneDrive/Desktop/cool/main/bark_files/barkbot-discord-bot/")
 
 # variable declaring
 # ----------------------------------------------------------------------------------------------------------------
