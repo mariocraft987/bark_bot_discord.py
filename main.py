@@ -38,7 +38,7 @@ class SimpleView(discord.ui.View):
 
 x = range(50)
 
-os.chdir("C:/Users/user/OneDrive/Desktop/cool/main/bark_files/barkbot-discord-bot/")
+os.chdir("C:/Users/USER/OneDrive/Desktop/cool/main/bark_files/barkbot-discord-bot/")
 
 # variable declaring
 # ----------------------------------------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ async def on_ready():
     print("ready when you are!")
     change_bot_status.start()
     try:
-        # some fancy shit to add the guild id too
+        # some fancy shit to add the guild id
         synced = await tree.sync(guild=discord.Object(id=GUILD_ID))
         print(f"Synced {len(synced)} commands on guild: {GUILD_ID}")
     except Exception as e:
@@ -141,17 +141,17 @@ async def treasure(interaction: discord.Interaction):
 
 @tree.command(
     name="magic_8_ball",
-    description="A random treasure finding game",
+    description="Ask the Magic 8 Ball a question",
     guild=discord.Object(id=GUILD_ID)
 )
 async def magic_8_ball(interaction: discord.Interaction, message: str):
     embed = discord.Embed(title=f"🎱 - {random.choice(magic_8_ball_replies)}",
-                      description=f"Magic 8 ball says to {message}...",
+                      description=f"Magic 8 ball says to \"{message}\"...",
                       colour=0x3500f5)
 
-    embed.set_author(name="Bark Dog",
+    embed.set_author(name="Bark Dog's Magic 8 Ball",
                  url="https://discordapp.com/users/1235336441698058341",
-                 icon_url="https://cdn.discordapp.com/avatars/1235336441698058341/2778b044d76c7f3975a444c658a0ac05.webp?size=128")
+                 icon_url="https://imagizer.imageshack.com/img923/7517/Qko5zv.png")
     await interaction.response.send_message(embed=embed)
 
 '''
@@ -242,8 +242,6 @@ async def shop(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed)
 
-'''
-
 # goofy ahh me copied a tutorial
 async def open_account(user):
     users = await get_bank_data()
@@ -269,32 +267,50 @@ async def get_bank_data():
 
 @tree.command(
     name="balance",
-    description="Shows your balance",
+    description="Shows your BarkBuck balance",
     guild=discord.Object(id=GUILD_ID)
 )
 async def balance(interaction: discord.Interaction):
-    await open_account(ctx.author)
+    await open_account(interaction.user)
 
-    user = ctx.author
+    user = interaction.user
     users = await get_bank_data()
 
     wallet_amt = users[str(user.id)]["wallet"]
     bank_amt = users[str(user.id)]["bank"]
 
-    em = discord.Embed(title = f"{ctx.author.name}'s BarkBuck balance", color = discord.Color.green())
+    em = discord.Embed(title = f"{user.name}'s BarkBuck balance", color = discord.Color.green())
     em.add_field(name = "BarkBuck Balance:", value = wallet_amt)
     em.add_field(name = "Bank:", value = bank_amt)
     await interaction.response.send_message(embed = em)
 
-@bot.command()
-async def barkbuck_give_user(ctx, target, amount):
-    await open_account(ctx.author)
+@tree.command(
+    name="give_user",
+    description="Gives a user an amount of BarkBucks",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def give_user(interaction: discord.Interaction, target: discord.Member, amount: int):
+    await open_account(interaction.user)
 
-    target_user = await bot.fetch_user(target)
-    user = ctx.author
+    target_user = target
+    user = interaction.user
     users = await get_bank_data()
 
-    await ctx.send(f"{ctx.author.name} gave {target_user.name} {amount} Barkbucks")
+    await interaction.response.send_message(f"{user.mention} gave {target_user.mention} {amount} Barkbucks")
+
+    embed = discord.Embed(title="BarkBuck payment",
+                      description=f"Hello, {interaction.user.name}!\n\n{interaction.user.mention} from the Bark Coding server, paid you {amount} BarkBucks!\n\nCheerio!",
+                      colour=0x00ff40)
+
+    embed.set_author(name="Bark Dog",
+                 url="https://discord.com/users/1235336441698058341",
+                 icon_url="https://cdn.discordapp.com/avatars/1235336441698058341/2778b044d76c7f3975a444c658a0ac05.png")
+
+    embed.set_footer(text="Bark Coding",
+                 icon_url="https://bark.dumorando.com/src/images/Bark.svg")
+
+
+    await target.send(embed=embed)
 
     users[str(target)]["wallet"] += amount
     users[str(user.id)]["wallet"] -= amount
@@ -302,6 +318,7 @@ async def barkbuck_give_user(ctx, target, amount):
     with open("bank.json", "w") as f:
         json.dump(users, f)
 
+'''
 @bot.command()
 async def barkbuck_shower(ctx):
     view = SimpleView()
@@ -315,9 +332,7 @@ async def barkbuck_shower(ctx):
 
     msg = await channel.fetch_message(message_id)   
     await msg.delete()
-
 '''
-
 
 with open("token.txt") as f:
     token = f.read()
