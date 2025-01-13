@@ -1,10 +1,19 @@
 # source code for Bark Dog discord bot
 
 import asyncio
+import typing
 import discord
+import requests
 
 from discord import app_commands
 from discord.ext import commands, tasks
+
+from discord import Webhook
+import aiohttp
+import datetime
+
+from typing import Optional
+
 from itertools import cycle
 import random
 from random import sample, shuffle
@@ -29,6 +38,9 @@ animals = ["😺", "🐶", "🐺", "🐵", "🐯", "🦁", "🦒", "🦊", "🦝
 
 GUILD_ID = 1225552735445843978
 
+# ----------------------------------------------------------------------------------------------------------------
+# classes
+
 class SimpleView(discord.ui.View):
 
     @discord.ui.button(label="Get Money",
@@ -36,9 +48,29 @@ class SimpleView(discord.ui.View):
     async def hello(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(f"💵 - Earned {random.randrange(1, 5)} BarkBucks!")
 
+class shopDropdown(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Cool Role", description="The Cool Role"),
+            discord.SelectOption(label="VIP Role", description="The Special (VIP) Role"),
+            discord.SelectOption(label="Mythical", description="The Mythical Role")
+        ]
+
+        super().__init__(placeholder="Buy something?", options=options, min_values="1", max_values="1")
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"You chose {self.values[0]}!", ephemeral=True)
+
+class shopView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.add_item(shopDropdown())
+
+
 x = range(50)
 
-os.chdir("C:/Users/USER/OneDrive/Desktop/cool/main/bark_files/barkbot-discord-bot/")
+# change this please
+os.chdir("C:/Users/CURRENTUSER/OneDrive/Desktop/cool/main/bark_files/barkbot-discord-bot/")
 
 # variable declaring
 # ----------------------------------------------------------------------------------------------------------------
@@ -52,11 +84,29 @@ def censorWord(word):
             censored_args = censored_args.replace(f"{bad_words[i]}", "[censored]")
         return censored_args
 
+async def logo_submit(url, file, user):
+    async with aiohttp.ClientSession() as session:
+        webhook = Webhook.from_url(url, session=session)
+        await webhook.send(f"NEW FILE SUBMISSION!\n\n{file}\nFrom {user}")
+
+async def email_submit(url, email, user, leave):
+    async with aiohttp.ClientSession() as session:
+        webhook = Webhook.from_url(url, session=session)
+
+        if (leave == True):
+            await webhook.send(f"<@1223056351346036817>,\n{user} wants to to leave the mailing list :(")
+        elif (leave == False):
+            await webhook.send(f"<@1223056351346036817>,\nNEW EMAIL SUBMISSION!\n\n**Email: **{email}\n**From:** {user}")
+
+        # emails.txt has emails stored
+
 @tasks.loop(seconds=60)
 async def change_bot_status():
     # await bot.change_presence(activity=discord.Game(next(bot_statuses)))
 
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Bark Coding"))
+    # await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Bark Coding"))
+
+    await bot.change_presence(activity=discord.CustomActivity(name='Dog stuff'))
 
 @bot.event
 async def on_ready():
@@ -64,7 +114,7 @@ async def on_ready():
     print("ready when you are!")
     change_bot_status.start()
     try:
-        # some fancy shit to add the guild id
+        # some fancy shit to add the guild id lol
         synced = await tree.sync(guild=discord.Object(id=GUILD_ID))
         print(f"Synced {len(synced)} commands on guild: {GUILD_ID}")
     except Exception as e:
@@ -75,16 +125,19 @@ async def on_ready():
 
 @tree.command(
     name="ping",
-    description="The bot replies \"Ping Pong!\" back.",
+    description="The bot replies \"Pong\" back.",
     guild=discord.Object(id=GUILD_ID)
 )
 async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message("Ping Pong!")
+    b = datetime.datetime.now()
+    response = requests.get('http://bark.dumorando.com')
+
+    await interaction.response.send_message(f"Pong!\n**Website Status:** {response.status_code}\n**Response Time:** {((datetime.datetime.now() - b).total_seconds() * 1000)} ms\n**Am I Being Nerdy:** True")
 
 
 @tree.command(
     name="help",
-    description="A list of commands for you to use",
+    description="A list of commands for you to use.",
     guild=discord.Object(id=GUILD_ID)
 )
 async def help(interaction: discord.Interaction):
@@ -98,7 +151,7 @@ async def help(interaction: discord.Interaction):
                  icon_url="https://cdn.discordapp.com/avatars/1235336441698058341/2778b044d76c7f3975a444c658a0ac05.webp?size=128")
 
     embed.add_field(name="Available cmds",
-                value="/ping\n/say [str]\n/treasure\n/magic8ball [str]\n/shop",
+                value="- /ping\n- /say [str]\n- /treasure\n- /magic_8_ball [str]\n- /shop\n- /give [user] [amount of barkbucks]\n- /submit [file]\n- /animal\n- /bagels [use_emojis]\n- /idiotify [text]\n- /email [your_email]\n- /email_leave",
                 inline=False)
 
     embed.set_footer(text="Bark Discord bot info")
@@ -108,18 +161,16 @@ async def help(interaction: discord.Interaction):
 
 @tree.command(
     name="say",
-    description="Makes the bot say something",
+    description="Makes the bot say something.",
     guild=discord.Object(id=GUILD_ID)
 )
 async def say(interaction: discord.Interaction, message: str):
 
         await interaction.response.send_message(f"{censorWord(message)}")
 
-
-
 @tree.command(
     name="treasure",
-    description="A random treasure finding game",
+    description="A random treasure finding game.",
     guild=discord.Object(id=GUILD_ID)
 )
 async def treasure(interaction: discord.Interaction):
@@ -141,7 +192,7 @@ async def treasure(interaction: discord.Interaction):
 
 @tree.command(
     name="magic_8_ball",
-    description="Ask the Magic 8 Ball a question",
+    description="Ask the Magic 8 Ball a question.",
     guild=discord.Object(id=GUILD_ID)
 )
 async def magic_8_ball(interaction: discord.Interaction, message: str):
@@ -153,6 +204,123 @@ async def magic_8_ball(interaction: discord.Interaction, message: str):
                  url="https://discordapp.com/users/1235336441698058341",
                  icon_url="https://imagizer.imageshack.com/img923/7517/Qko5zv.png")
     await interaction.response.send_message(embed=embed)
+
+
+@tree.command(
+    name="submit",
+    description="Like PenguinMod, submit an image that will go into our library.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def submit(interaction: discord.Interaction, file: discord.Attachment):
+    await interaction.response.send_message(f"Sended to <#1314674085032235019>\n\n{file}", ephemeral=True)
+
+    url = "https://discord.com/api/webhooks/1314675135101407242/CSl_uzdBR3hM3-mFPU5Uv7YlMSiQSAs6rN96hYCx6jhoOnOjV7Oum7zrPF9krJvd3vJF"
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(await logo_submit(url, file, interaction.user.mention))
+    loop.stop()
+
+@tree.command(
+    name="help_email",
+    description="What the /email and /email_leave command does.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def help_email(interaction: discord.Interaction):
+    embed = discord.Embed(title="Information - /Email",
+                      colour=0x00b0f4,
+                      timestamp=datetime.now())
+
+    embed.set_author(name="Bark Dog",
+                 url="https://discordapp.com/users/1235336441698058341",
+                 icon_url="https://cdn.discordapp.com/avatars/1235336441698058341/2778b044d76c7f3975a444c658a0ac05.webp?size=128")
+
+    embed.add_field(name="How this works?",
+                value="When `/email` is executed, a webhook is sent \nto another server, which only has the admins, for privacy. \nA Gmail account called _cytrincstudios@gmail.com_, will then \nmessage you every time a new update is made.",
+                inline=False)
+    embed.add_field(name="A New Field",
+                value="",
+                inline=False)
+
+    embed.set_footer(text="Bark Discord email info")
+
+    await interaction.response.send_message(embed=embed)
+
+@tree.command(
+    name="email",
+    description="Enter our mailing list.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def email(interaction: discord.Interaction, email: str):
+    await interaction.response.send_message(f"Joined mailing list", ephemeral=True)
+
+    url = "https://discord.com/api/webhooks/1324085179962097734/XOLpRBDBE5y7j_hWdAyc791q7JsGVwfaxpPgOkRdwJ5zDGoDX0ezmiwSJcwSyWnl4oGS"
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(await email_submit(url, email, interaction.user.mention, False))
+    loop.stop()
+
+@tree.command(
+    name="email_leave",
+    description="Leave our mailing list.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def email(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Left mailing list", ephemeral=True)
+
+    url = "https://discord.com/api/webhooks/1324085179962097734/XOLpRBDBE5y7j_hWdAyc791q7JsGVwfaxpPgOkRdwJ5zDGoDX0ezmiwSJcwSyWnl4oGS"
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(await email_submit(url, None, interaction.user.mention, True))
+    loop.stop()
+
+@tree.command(
+    name="idiotify",
+    description="Idiotify your text.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def idiotify(interaction: discord.Interaction, message: str):
+    await interaction.response.send_message(f"{message}")
+
+@tree.command(
+    name="links",
+    description="Sends back every Bark URL in existent.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def links(interaction: discord.Interaction):
+    await interaction.response.send_message(f"- https://bark.dumorando.com\n- https://bark-editor.vercel.app\n- https://api.bark.dumorando.com\n- https://bark-coding-pb.vercel.app")
+
+
+@tree.command(
+    name="animal",
+    description="Play an animal guessing game.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def animal(interaction: discord.Interaction):
+    await interaction.response.send_message("Guess what animal i'm thinking of!\nReply the animal emoji, and i'll tell you if its right or wrong.\n**CHOICES:**\n😺🐶🐺🐵🐯🦁🦒🦊🦝🐮🐷🐭🐗🐹🐰🐻🐻‍❄️🐨🐼🐸🦓🐲🐔🦄🫏🫎🐴🐧\n\nreply \"leave\" to exit game.")
+
+    animal_in_mind = random.choice(animals)
+
+    def check(m):
+        return True
+
+    while True:
+        msg = await bot.wait_for("message", check=check)
+        if (msg.content == animal_in_mind):
+            await interaction.followup.send(f"CORRECT!")
+        if (msg.content == "leave"):
+            await interaction.followup.send(f"Sorry you didn't get it right :(\nThe answer was \"{animal_in_mind}\"")
+            break
+        else:
+            await interaction.followup.send(f"Incorrect.")
+
+@tree.command(
+    name="bagels",
+    description="Play the bagels deduction game.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def bagels(interaction: discord.Interaction, use_emojis: typing.Literal['Yes', 'No']):
+    await interaction.response.send_message("In Development!")
+
 
 '''
 
@@ -169,32 +337,6 @@ async def pizza(ctx):
 
     if confirmation:
         await message.edit(content=message.content.replace("🍕🍕🍕🍽️", "🍽️"))
-
-# Guess my animal game
-@bot.command()
-async def animal(ctx):
-    guessed_animal = random.choice(animals)
-
-    await ctx.send("I am thinking of an animal right now...\n\nChoices: \"😺🐶🐺🐵🐯🦁🦒🦊🦝🐮🐷🐭🐗🐹🐰🐻🐻‍❄️🐨🐼🐸🦓🐲🐔🦄🫏🫎🐴🐧\"\n-# Game currently under development, don't expect that much from it.")
-
-    def check(m):
-        return m.content == guessed_animal and m.channel == ctx.channel
-    
-    guesses = 10
-    
-    while 10 > 0:
-
-        msg = await bot.wait_for("message", check=check)
-        
-        if msg.content == guessed_animal:
-            print("right")
-            await msg.reply("Right!")
-            break
-        else:
-            print("wrong")
-            await msg.reply("Wrong...")
-            guesses - 1
-        continue
 
 
 # Bagels deduction game
@@ -223,7 +365,7 @@ async def bagels(ctx):
 
 @tree.command(
     name="shop",
-    description="Shows the shop",
+    description="Shows the shop items and their price.",
     guild=discord.Object(id=GUILD_ID)
 )
 async def shop(interaction: discord.Interaction):
@@ -235,7 +377,7 @@ async def shop(interaction: discord.Interaction):
                  icon_url="https://cdn.discordapp.com/avatars/1235336441698058341/2778b044d76c7f3975a444c658a0ac05.webp?size=128")
 
     embed.add_field(name="Items",
-                value="<@&1308852389016633454>\n- 300 BarkBucks\n<@&1257055961575592050>\n- 700 BarkBucks\n<@&1308852795063140434>\n- 50 BarkBucks",
+                value="<@&1308852389016633454>\n- 300 BarkBucks\n<@&1257055961575592050>\n- 700 BarkBucks\n<@&1308852795063140434>\n- 50 BarkBucks\n<@&1311824504137318530>\n- 150 BarkBucks",
                 inline=False)
 
     embed.set_footer(text="BarkBucks Shop")
@@ -251,7 +393,7 @@ async def open_account(user):
     else:
         users[str(user.id)] = {}
         users[str(user.id)]["wallet"] = 0
-        users[str(user.id)]["bank"] = 0
+        users[str(user.id)]["karma"] = 0
 
     with open("bank.json", "w") as f:
         json.dump(users, f)
@@ -267,26 +409,67 @@ async def get_bank_data():
 
 @tree.command(
     name="balance",
-    description="Shows your BarkBuck balance",
+    description="Shows your/a user's BarkBuck and Karma.",
     guild=discord.Object(id=GUILD_ID)
 )
-async def balance(interaction: discord.Interaction):
-    await open_account(interaction.user)
+async def balance(interaction: discord.Interaction, profile: Optional[discord.Member]):
+    if (profile == None):
+        user = interaction.user
+    else:
+        user = profile
+
+    await open_account(user)
+
+    users = await get_bank_data()
+
+    wallet_amt = users[str(user.id)]["wallet"]
+    bank_amt = users[str(user.id)]["karma"]
+
+    if (user.id == 1235336441698058341):
+        em = discord.Embed(title = f"{user.name}'s BarkBuck balance", color = discord.Color.green())
+        em.add_field(name = "BarkBuck Balance:", value = "∞")
+        em.add_field(name = "Karma:", value = "∞")
+        await interaction.response.send_message(embed = em)
+    else:
+        em = discord.Embed(title = f"{user.name}'s BarkBuck balance", color = discord.Color.green())
+        em.add_field(name = "BarkBuck Balance:", value = wallet_amt)
+        em.add_field(name = "Karma:", value = bank_amt)
+        await interaction.response.send_message(embed = em)
+
+
+@tree.command(
+    name="shop_buy",
+    description="Buy an item from the shop.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def buy(interaction: discord.Interaction):
+
+    await interaction.response.send_message("Buying something?", view=shopView())
+
+
+@tree.command(
+    name="beg",
+    description="Beg for BarkBucks.",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def beg(interaction: discord.Interaction):
+    barkbucks_earned = random.randint(0, 3)
 
     user = interaction.user
     users = await get_bank_data()
 
-    wallet_amt = users[str(user.id)]["wallet"]
-    bank_amt = users[str(user.id)]["bank"]
+    users[str(user.id)]["wallet"] += barkbucks_earned
+    users[str(user.id)]["karma"] -= 1
 
-    em = discord.Embed(title = f"{user.name}'s BarkBuck balance", color = discord.Color.green())
-    em.add_field(name = "BarkBuck Balance:", value = wallet_amt)
-    em.add_field(name = "Bank:", value = bank_amt)
-    await interaction.response.send_message(embed = em)
+    await interaction.response.send_message(f"You have earned {barkbucks_earned} BarkBucks from begging!\nBut, {user.name}, you lost 1 **Karma** :(")
+
+    with open("bank.json", "w") as f:
+        json.dump(users, f)
+
 
 @tree.command(
     name="give_user",
-    description="Gives a user an amount of BarkBucks",
+    description="Gives a user an amount of BarkBucks.",
     guild=discord.Object(id=GUILD_ID)
 )
 async def give_user(interaction: discord.Interaction, target: discord.Member, amount: int):
@@ -296,23 +479,26 @@ async def give_user(interaction: discord.Interaction, target: discord.Member, am
     user = interaction.user
     users = await get_bank_data()
 
-    await interaction.response.send_message(f"{user.mention} gave {target_user.mention} {amount} Barkbucks")
+    if (target_user.id == interaction.user.id):
+        await interaction.response.send_message("You cannot give yourself BarkBucks!", ephemeral=True)
+    else:
+        await interaction.response.send_message(f"{user.mention} gave {target_user.mention} **{amount} Barkbucks**!\nCongrats, {user.name}, you earned 2 **Karma**!")
+        users[str(user.id)]["karma"] += 2
 
     embed = discord.Embed(title="BarkBuck payment",
-                      description=f"Hello, {interaction.user.name}!\n\n{interaction.user.mention} from the Bark Coding server, paid you {amount} BarkBucks!\n\nCheerio!",
+                      description=f"Hello, {interaction.user.name}!\n\n{interaction.user.mention} from the Bark Coding server, paid you **{amount}** BarkBucks!\n\nCheerio!",
                       colour=0x00ff40)
 
     embed.set_author(name="Bark Dog",
                  url="https://discord.com/users/1235336441698058341",
                  icon_url="https://cdn.discordapp.com/avatars/1235336441698058341/2778b044d76c7f3975a444c658a0ac05.png")
 
-    embed.set_footer(text="Bark Coding",
-                 icon_url="https://bark.dumorando.com/src/images/Bark.svg")
+    embed.set_footer(text="Bark Coding")
 
+    if (target_user.id != interaction.user.id):
+        await target.send(embed=embed)
 
-    await target.send(embed=embed)
-
-    users[str(target)]["wallet"] += amount
+    users[str(target.id)]["wallet"] += amount
     users[str(user.id)]["wallet"] -= amount
 
     with open("bank.json", "w") as f:
@@ -333,6 +519,7 @@ async def barkbuck_shower(ctx):
     msg = await channel.fetch_message(message_id)   
     await msg.delete()
 '''
+
 
 with open("token.txt") as f:
     token = f.read()
