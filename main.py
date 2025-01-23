@@ -253,7 +253,7 @@ async def help_email(interaction: discord.Interaction):
 async def email(interaction: discord.Interaction, email: str):
     await interaction.response.send_message(f"Joined mailing list", ephemeral=True)
 
-    url = "https://discord.com/api/webhooks/1324085179962097734/XOLpRBDBE5y7j_hWdAyc791q7JsGVwfaxpPgOkRdwJ5zDGoDX0ezmiwSJcwSyWnl4oGS"
+    url = "WEBHOOK_URL"
 
     loop = asyncio.new_event_loop()
     loop.run_until_complete(await email_submit(url, email, interaction.user.mention, False))
